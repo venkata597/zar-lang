@@ -1,6 +1,7 @@
 #include "../include/lexer.hpp"
 #include "../include/parser.hpp"
 #include "../include/ast.hpp"
+#include "../include/codegen.hpp"
 
 int main(int argc,char** argv){
     if(argc<2){
@@ -18,4 +19,6 @@ int main(int argc,char** argv){
     std::unique_ptr<Zar::exprNode> ast = parser.get_ast();
     Zar::PrettyPrinter printer(ast.get());
     printer.print_ast();
+    Zar::Codegen codegen(ast.get());
+    codegen.genasm();
 }

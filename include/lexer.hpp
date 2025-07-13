@@ -5,7 +5,6 @@
 #include <string>
 #include <vector>
 #include <fstream>
-#include <exception>
 #include <cctype>
 
 namespace Zar{
@@ -50,20 +49,6 @@ namespace Zar{
                 path = pth;
                 _contents = _openFile();
             }
-            /*void print_check(){
-                _openFile();
-                try{
-                    char ch = _skip_whitespace();
-                    while(1){
-                        std::cout << ch;
-                        ch = advance();
-                    }
-                }catch(EOF_Exception& e){
-                    std::cout << e.what() << std::endl;
-                }
-            }*/
-
             std::vector<Zar::Token> scanFile(); 
     };
-
 }
