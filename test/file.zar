@@ -1,0 +1,7 @@
+let y: int = 10;
+fn add(a:int,b:int): int{
+    y = 9;
+    if(y==9){
+        y = 0;
+    }
+}

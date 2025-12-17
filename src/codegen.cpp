@@ -1,112 +1,294 @@
 #include "../include/codegen.hpp"
+#include <llvm/IR/BasicBlock.h>
+#include <llvm/IR/DerivedTypes.h>
+#include <llvm/IR/Instructions.h>
+#include <llvm/IR/Value.h>
+#include <llvm/Support/FileSystem.h>
+#include <llvm/Support/raw_ostream.h>
+#include <string>
+#include <system_error>
 
-
-// "true" in the register pair represents its free state
-std::array<std::pair<std::string,bool>,5> Zar::Codegen::_regs = {
-    x86_REGISTER("r8",true),
-    x86_REGISTER("r9",true),
-    x86_REGISTER("r10",true),
-    x86_REGISTER("r11",true),
-    x86_REGISTER("r12",true),
-};
-
-void Zar::Codegen::_make_asm_file(){
-    outfile.open("cg.asm",std::ios::trunc);
+void Zar::CodeGen::_make_module(std::string name){
+    auto module = std::make_unique<Module>(name,context);
+    _current_module = std::move(module);
 }
 
-int Zar::Codegen::_get_free_reg(){
-    for(int ir = 0;ir<_regs.size();ir++){
-        if(_regs[ir].second == true){
-            _regs[ir].second = false;
-            return ir;
+void Zar::CodeGen::_pushScope(){
+    std::unordered_map<std::string,CG_Symbol> scope;
+    symtabstack.push_back(scope);
+}
+
+void Zar::CodeGen::_popScope(){
+    if(!symtabstack.empty()){
+        symtabstack.pop_back();
+    }
+    else{
+        std::cerr << "popScope on empty Symbol Table stack" << std::endl;
+        std::exit(1);
+    }
+}
+
+void Zar::CodeGen::_addSymbol(std::string name,CG_Symbol symbol){
+    auto& cscope = symtabstack.back();
+    if(cscope.find(name)!=cscope.end()){
+        std::cerr << "Redeclaration of Symbol in the same scope" << std::endl;
+        std::exit(1);
+    }
+    else{
+        cscope.emplace(name,symbol);
+    }
+}
+
+Zar::CodeGen::CG_Symbol Zar::CodeGen::_lookup(std::string name){
+    CG_Symbol Symbol(nullptr);
+    for(int it = symtabstack.size()-1;it>=0;it--){
+        if(symtabstack.at(it).find(name)!=symtabstack.at(it).end()){
+            Symbol = symtabstack.at(it).at(name);
+            break;
         }
     }
-    std::cout << "No Free Register" << std::endl;
-    exit(1);
+    return Symbol;
 }
 
-void Zar::Codegen::_free_all_regs(){
-    for(int i = 0;i<_regs.size();i++){
-        _regs[i].second = true;
+Value* Zar::CodeGen::_getRValue(Value* v,Type* t){
+    if(v->getType()->isPointerTy())
+        return builder.CreateLoad(t,v,"l_"+v->getName());
+    return v;
+}
+
+Value* Zar::CodeGen::_genAdd(Value* lhs,Value* rhs,std::string rn){
+    return builder.CreateAdd(lhs,rhs,rn);
+}
+Value* Zar::CodeGen::_genSub(Value* lhs,Value* rhs,std::string rn){
+    return builder.CreateSub(lhs,rhs,rn);
+}
+Value* Zar::CodeGen::_genMul(Value* lhs,Value* rhs,std::string rn){
+    return builder.CreateMul(lhs,rhs,rn);
+}
+Value* Zar::CodeGen::_genDiv(Value* lhs,Value* rhs,std::string rn){
+    return builder.CreateSDiv(lhs,rhs,rn);
+}
+Value* Zar::CodeGen::_genEq(Value* lhs,Value* rhs,std::string rn){
+    return builder.CreateICmpEQ(lhs,rhs,rn);
+}
+Value* Zar::CodeGen::_genNEq(Value* lhs,Value* rhs,std::string rn){
+    return builder.CreateICmpNE(lhs,rhs,rn);
+}
+Value* Zar::CodeGen::_genGT(Value* lhs,Value* rhs,std::string rn){
+    return builder.CreateICmpUGT(lhs,rhs,rn);
+}
+Value* Zar::CodeGen::_genLT(Value* lhs,Value* rhs,std::string rn){
+    return builder.CreateICmpULT(lhs,rhs,rn);
+}
+Value* Zar::CodeGen::_genGEq(Value* lhs,Value* rhs,std::string rn){
+    return builder.CreateICmpUGE(lhs,rhs,rn);
+}
+Value* Zar::CodeGen::_genLEq(Value* lhs,Value* rhs,std::string rn){
+    return builder.CreateICmpULE(lhs,rhs,rn);
+}
+
+void Zar::CodeGen::_enterif(){
+    _ifstack.push_back(++_if_count);
+}
+
+void Zar::CodeGen::_exitif(){
+    _ifstack.pop_back();
+}
+
+std::string Zar::CodeGen::_get_cond_name(std::string bnme){
+    std::string bn;
+    bn+= "if";
+    bn+=std::to_string(_ifstack.back());
+    bn+= bnme;
+    return bn;
+}
+
+void Zar::CodeGen::visit(const literalNode* node){
+    if(node->type==ExprType::EXPR_IDEN_LITRL){
+        auto sym = _lookup(node->value);
+        _lastVal = _getRValue(sym.val,sym.typ);
+    }
+    else{
+        _lastVal = ConstantInt::get(builder.getInt32Ty(),std::stoi(node->value));
     }
 }
 
-void Zar::Codegen::_free_reg(int nreg){
-    _regs[nreg].second = true;
-}
+void Zar::CodeGen::visit(const binexprNode* node){
+    node->left->accept(*this);
+    Value* lhs = _lastVal;
+    node->right->accept(*this);
+    Value* rhs = _lastVal;
 
-void Zar::Codegen::_pre_asm(){
-    outfile << "section .text\n\tglobal _start\n\n_start:\n"; 
-}
-
-int Zar::Codegen::_gen_valreg(int val){
-    int reg = _get_free_reg();
-    outfile << "\tmov " << _regs[reg].first << ", " << val << '\n';
-    return reg;
-}
-
-int Zar::Codegen::_genadd(int lreg,int rreg){
-    outfile << "\tadd " << _regs[lreg].first << ", " << _regs[rreg].first << '\n';
-    _free_reg(rreg);
-    return lreg;
-}
-
-int Zar::Codegen::_gensub(int lreg,int rreg){
-    outfile << "\tsub " << _regs[rreg].first << ", " << _regs[lreg].first << "\n";
-    _free_reg(lreg);
-    return rreg;
-}
-
-int Zar::Codegen::_genmult(int lreg,int rreg){
-    outfile << "\tmov rax, " << _regs[lreg].first << '\n';
-    outfile << "\tmul " << _regs[rreg].first << '\n';
-    outfile << "\tmov " << _regs[rreg].first << ", rax" << '\n';
-    _free_reg(lreg);
-    return rreg;
-}
-
-int Zar::Codegen::_gendiv(int lreg,int rreg){
-   outfile << "\tmov rax, " << _regs[lreg].first << '\n';
-   outfile << "\tcqo" << '\n';
-   outfile << "\tidiv " << _regs[rreg].first << '\n';
-   outfile << "\tmov " << _regs[rreg].first << ", rax" << '\n';
-   _free_reg(lreg);
-   return rreg;
-}
-
-void Zar::Codegen::_post_asm(int reg){
-    outfile << "\tmov rdi, " << _regs[reg].first << '\n';
-    outfile << "\tmov rax, 60\n";
-    outfile << "\tsyscall\n";
-}
-
-int Zar::Codegen::_code_gen(const Zar::exprNode* node){
-    int lreg,rreg;
-    if(node->left.get()) lreg = _code_gen(node->left.get());
-    if(node->right.get()) rreg = _code_gen(node->right.get()); 
-
-    switch(node->ntype){
-        case Zar::NodeTypes::N_PLUS:
-            return Zar::Codegen::_genadd(lreg,rreg);
-        case Zar::NodeTypes::N_MINUS:
-            return Zar::Codegen::_gensub(lreg,rreg);
-        case Zar::NodeTypes::N_MULT:
-            return Zar::Codegen::_genmult(lreg,rreg);
-        case Zar::NodeTypes::N_DIV:
-            return Zar::Codegen::_gendiv(lreg,rreg);
-        case Zar::NodeTypes::N_INT:
-            return Zar::Codegen::_gen_valreg(std::stoi(node->value));
+    switch(node->Op){
+        case Zar::BinaryOp::ADD:
+            _lastVal = _genAdd(lhs,rhs,"addtemp");
+            break;
+        case Zar::BinaryOp::SUB:
+            _lastVal = _genSub(lhs,rhs,"subtemp");
+            break;
+        case Zar::BinaryOp::MULT:
+            _lastVal = _genMul(lhs,rhs,"multemp");
+            break;
+        case Zar::BinaryOp::DIV:
+            _lastVal = _genDiv(lhs,rhs,"divtemp");
+            break;
+        case Zar::BinaryOp::EQ:
+            _lastVal = _genEq(lhs,rhs,"eqtemp");
+            break;
+        case Zar::BinaryOp::NEQ:
+            _lastVal = _genNEq(lhs,rhs,"neqtemp");
+            break;
+        case Zar::BinaryOp::GT:
+            _lastVal = _genGT(lhs,rhs,"gttemp");
+            break;
+        case Zar::BinaryOp::LT:
+            _lastVal = _genLT(lhs,rhs,"lttemp");
+            break;
+        case Zar::BinaryOp::GTE:
+            _lastVal = _genGEq(lhs,rhs,"geqtemp");
+            break;
+        case Zar::BinaryOp::LTE:
+            _lastVal = _genLEq(lhs,rhs,"leqtemp");
+            break;
         default:
-            std::cout << "Unknown AST operator" << '\n';
+            std::cout << "Unknown Node type encountered" << std::endl;
             exit(1);
     }
 }
 
-void Zar::Codegen::genasm(){
-    int r;
-    _make_asm_file();
-    _pre_asm();
-    r = _code_gen(tree);
-    _post_asm(r);
-    outfile.close();
+void Zar::CodeGen::visit(const Block* node){
+    _pushScope();
+    for(int i = 0;i<node->block.size();i++){
+        node->block[i]->accept(*this);
+    }
+    _popScope();
+}
+
+void Zar::CodeGen::visit(const ExprStmt* node){
+    node->expr->accept(*this);
+}
+
+void Zar::CodeGen::visit(const DeclStmt* node){
+    node->decl->accept(*this);
+}
+
+void Zar::CodeGen::visit(const VarDeclNode* node){
+    if(_lookup(node->iden).val==nullptr){
+        Value* var = builder.CreateAlloca(types.at(node->data_type),nullptr,node->iden);
+        if(node->expression == nullptr){
+            _addSymbol(node->iden,CG_Symbol(var,types.at(node->data_type),node->mutble));
+        }
+        else{
+            node->expression->accept(*this);
+            Value* s_val = _lastVal;
+            builder.CreateStore(s_val,var);
+            _addSymbol(node->iden,CG_Symbol(var,types.at(node->data_type),node->mutble));
+        }
+    }
+    else{
+        std::cerr << "Redeclaration of the variable with same identifier in this scope" << std::endl;
+        std::exit(1);
+    }
+}
+
+void Zar::CodeGen::visit(const AssignStmtNode* node){
+    auto sym = _lookup(node->iden);
+    if(sym.val!=nullptr){
+        if(sym.isMut == false){
+            std::cerr << "Assigning a value to a immutable variable" << std::endl;
+            std::exit(1);
+        }
+        else{
+            node->expression->accept(*this);
+            Value* s_val = _lastVal;
+            builder.CreateStore(s_val,sym.val);
+        }
+    }
+}
+
+void Zar::CodeGen::visit(const IfStmtNode* node){
+    node->condition->accept(*this);
+    Value* cond = _lastVal;
+    _enterif();
+    BasicBlock* thenblock = BasicBlock::Create(context,_get_cond_name("then"),_current_function);
+    BasicBlock* elseblock = BasicBlock::Create(context,_get_cond_name("else"),_current_function);
+    BasicBlock* mergeblock = BasicBlock::Create(context,"merge",_current_function);
+    builder.CreateCondBr(cond,thenblock,elseblock);
+    _exitif();
+    builder.SetInsertPoint(thenblock);
+    node->thenblock->accept(*this);
+    builder.CreateBr(mergeblock);
+    if(node->elseBlocks.size()==0){
+        builder.CreateBr(mergeblock);
+    }
+    else if(node->elseBlocks.size()==1){
+        builder.SetInsertPoint(elseblock);
+        if(node->elseBlocks[0]->condition==nullptr){
+            node->elseBlocks[0]->thenblock->accept(*this);
+        }
+        else{
+            node->elseBlocks[0]->accept(*this);
+        }
+        builder.CreateBr(mergeblock);
+    }
+    else{
+        builder.SetInsertPoint(elseblock);
+        for(int i = 0;i<node->elseBlocks.size();i++){
+            node->elseBlocks[i]->accept(*this);
+        }
+        builder.CreateBr(mergeblock);
+    }
+    builder.SetInsertPoint(mergeblock);
+}
+
+void Zar::CodeGen::visit(const LoopStmtNode* node){
+    if(node->initializer)
+        node->initializer->accept(*this);
+    BasicBlock* entryblock = &_current_function->getEntryBlock();
+    BasicBlock* loopcond = BasicBlock::Create(context,"loop.cond",_current_function);
+    BasicBlock* loopbody = BasicBlock::Create(context,"loop.body",_current_function);
+    BasicBlock* loopend = BasicBlock::Create(context,"loop.end",_current_function);
+    builder.CreateBr(loopcond);
+    builder.SetInsertPoint(loopcond);
+    auto lphi = builder.CreatePHI(builder.getInt32Ty(),2,"i_phi");
+    lphi->addIncoming(_lastVal,entryblock);
+    node->condition->accept(*this);
+    Value* cond = _lastVal;
+    builder.CreateCondBr(cond,loopbody,loopend);
+
+    builder.SetInsertPoint(loopbody);
+    node->body->accept(*this);
+    node->update_expr->accept(*this);
+    Value* nextval = _lastVal;
+    lphi->addIncoming(nextval,loopbody);
+    builder.CreateBr(loopcond);
+
+    builder.SetInsertPoint(loopend);
+}
+
+void Zar::CodeGen::_pre_gen(){
+    _make_module("module1");
+    FunctionType* ftype = FunctionType::get(builder.getInt32Ty(),false);
+    Function* fn = Function::Create(ftype,Function::ExternalLinkage,"main",_current_module.get());
+    _current_function = fn;
+    BasicBlock* entry = BasicBlock::Create(context,"entry",_current_function);
+    builder.SetInsertPoint(entry);
+}
+
+void Zar::CodeGen::_post_gen(){
+    builder.CreateRet(ConstantInt::get(builder.getInt32Ty(),0)); // Replace this first, this is written just for test
+    std::error_code EC;
+    raw_fd_ostream dest("module1.ll",EC,sys::fs::OF_None);
+    if(EC){
+        errs() << "Could Not Open File" << EC.message() << '\n';
+        return;
+    }
+    _current_module->print(dest,nullptr);
+    dest.flush();
+}
+
+void Zar::CodeGen::generate(){
+    _pre_gen();
+    tree.unit->accept(*this);
+    _post_gen();
 }
