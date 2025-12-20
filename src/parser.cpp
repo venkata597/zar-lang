@@ -249,27 +249,19 @@ Zar::IfStmtPtr Zar::Parser::_parse_if(){
     return ifno;
 }
 
-Zar::LoopStmtPtr Zar::Parser::_parse_loop(bool wloop){
+Zar::LoopStmtPtr Zar::Parser::_parse_loop(){
     StmtPtr initialzer{nullptr};
     ExprPtr cond{nullptr};
     StmtPtr upexpr{nullptr};
     BlockPtr block;
     _check(Zar::TokenTypes::L_PAREN)? _advance() : err_engine.report_error(ERROR,"Missing \"(\" after loop statement in",_peek(-1)._src_loc);
-    if(wloop == true){
-        cond = std::move(_parseExpression());
-    }
-    else{
-        initialzer = std::move(_statements());
-        cond = std::move(_parseExpression());
-        _advance();
-        upexpr = std::move(_statements());
-    }
+    initialzer = std::move(_parse_item());
+    cond = std::move(_parseExpression());
+    _advance();
+    upexpr = std::move(_statements());
     _check(Zar::TokenTypes::R_PAREN)? _advance() : err_engine.report_error(ERROR,"Expected \")\" after expression",_peek(-1)._src_loc);
     _check(Zar::TokenTypes::L_CURLY)? _advance() : err_engine.report_error(ERROR,"Expected '{' after conditional expression",_peek(-1)._src_loc);
     block = _parse_block();
-    if(wloop == true){
-        return std::make_unique<LoopStmtNode>(StmtType::STMT_WHILE,std::move(initialzer),std::move(cond),std::move(upexpr),std::move(block));
-    }
     return std::make_unique<LoopStmtNode>(StmtType::STMT_FOR,std::move(initialzer),std::move(cond),std::move(upexpr),std::move(block));
 };
 
@@ -359,10 +351,9 @@ Zar::StmtPtr Zar::Parser::_statements(){
         auto ifstmt = _parse_if();
         return std::move(ifstmt);
     }
-    else if(_Tok._type == Zar::TokenTypes::FOR || _Tok._type == Zar::TokenTypes::WHILE){
-        bool flg = _Tok._type == Zar::TokenTypes::WHILE ? true : false;
+    else if(_Tok._type == TokenTypes::LOOP){
         _advance();
-        auto loopstmt = _parse_loop(flg);
+        auto loopstmt = _parse_loop();
         return std::move(loopstmt);
     }
     return nullptr;
@@ -372,8 +363,7 @@ Zar::StmtPtr Zar::Parser::_parse_item(){
     switch(_Tok._type){
         case Zar::TokenTypes::IDENTIFIER:
         case Zar::TokenTypes::IF:
-        case Zar::TokenTypes::FOR:
-        case Zar::TokenTypes::WHILE:
+        case Zar::TokenTypes::LOOP:
             return _statements();
             break;
         case Zar::TokenTypes::LET:

@@ -48,7 +48,7 @@ namespace Zar{
         VarDeclPtr _var_decl(bool mut_flag);
         AssignStmtPtr _assignment();
         IfStmtPtr _parse_if();
-        LoopStmtPtr _parse_loop(bool wloop);
+        LoopStmtPtr _parse_loop();
         ParamDeclPtr _parse_param();
         FuncDeclPtr _parse_fn();
         BlockStmtPtr _blockstmts();
