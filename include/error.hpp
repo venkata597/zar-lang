@@ -3,9 +3,9 @@
 #include <vector>
 #include <string>
 
-#define RED   "\033[31m"
-#define BOLD  "\033[1m"
-#define RESET "\033[0m"
+#define ERR_RED   "\033[31m"
+#define ERR_BOLD  "\033[1m"
+#define ERR_RESET "\033[0m"
 
 
 namespace Zar{

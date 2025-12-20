@@ -18,7 +18,7 @@ void Zar::ErrorEngine::print_errors(){
         std::cout << error.srcloc.file << ":" << error.srcloc._line << ":" << error.srcloc._column << " ";
         switch(error.severity){
             case ERROR:
-                std::cout << BOLD << RED << "Error: " << RESET << error.message;
+                std::cout << ERR_BOLD << ERR_RED << "Error: " << ERR_RESET << error.message;
                 break;
             case WARNING:
                 std::cout << "Warning: " << error.message;

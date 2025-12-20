@@ -25,6 +25,7 @@ namespace Zar{
         void _make_module(std::string name);
 
         Function* _current_function;
+        std::vector<llvm::Type*> _c_params_list;
 
         TranslationUnit tree;
 
@@ -49,8 +50,9 @@ namespace Zar{
         void _addSymbol(std::string name,CG_Symbol symbol);
         CG_Symbol _lookup(std::string name);
 
-        std::unordered_map<Zar::DataType,IntegerType*> types = {
+        std::unordered_map<Zar::DataType,Type*> types = {
             {DataType::TYPE_INT,builder.getInt32Ty()},
+            {DataType::TYPE_VOID,builder.getVoidTy()}
         };
 
         // Expression CodeGen helpers

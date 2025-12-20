@@ -1,7 +1,10 @@
-let y: int = 10;
 fn add(a:int,b:int): int{
-    y = 9;
+    let mut y: int = 9;
     if(y==9){
         y = 0;
     }
+}
+
+fn main(a:int): int{
+    let x: int = 10;
 }

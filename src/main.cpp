@@ -3,6 +3,7 @@
 #include "../include/parser.hpp"
 #include "../include/nprettyprinter.hpp"
 #include "../include/error.hpp"
+#include "../include/codegen.hpp"
 
 int main(int argc,char** argv){
     if(argc<2){
@@ -19,4 +20,6 @@ int main(int argc,char** argv){
     if(ee.hasErrors()){
         ee.print_errors();
     }
+    Zar::CodeGen cg(std::move(ast));
+    cg.generate();
 }

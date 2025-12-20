@@ -1,6 +1,7 @@
 #include "../include/codegen.hpp"
 #include <llvm/IR/BasicBlock.h>
 #include <llvm/IR/DerivedTypes.h>
+#include <llvm/IR/Function.h>
 #include <llvm/IR/Instructions.h>
 #include <llvm/IR/Value.h>
 #include <llvm/Support/FileSystem.h>
@@ -159,7 +160,8 @@ void Zar::CodeGen::visit(const binexprNode* node){
 void Zar::CodeGen::visit(const Block* node){
     _pushScope();
     for(int i = 0;i<node->block.size();i++){
-        node->block[i]->accept(*this);
+        if(node->block.at(i)){node->block.at(i)->accept(*this);}
+        else{continue;}
     }
     _popScope();
 }
@@ -266,19 +268,37 @@ void Zar::CodeGen::visit(const LoopStmtNode* node){
     builder.SetInsertPoint(loopend);
 }
 
-void Zar::CodeGen::_pre_gen(){
-    _make_module("module1");
-    FunctionType* ftype = FunctionType::get(builder.getInt32Ty(),false);
-    Function* fn = Function::Create(ftype,Function::ExternalLinkage,"main",_current_module.get());
+void Zar::CodeGen::visit(const Zar::ParamDeclNode* node){
+    _c_params_list.push_back(types.at(node->type));
+}
+
+void Zar::CodeGen::visit(const Zar::FuncDeclNode* node){
+    for(int i = 0;i<node->params.size();i++){
+        node->params.at(i)->accept(*this);
+    }
+    Type* rttype = types.at(node->return_type);
+    FunctionType* type = FunctionType::get(rttype,_c_params_list,false);
+    Function* fn = Function::Create(
+        type,
+        Function::ExternalLinkage,
+        node->name,
+        _current_module.get()
+    );
+    _c_params_list.clear();
     _current_function = fn;
     BasicBlock* entry = BasicBlock::Create(context,"entry",_current_function);
     builder.SetInsertPoint(entry);
+    node->body->accept(*this);
+}
+
+void Zar::CodeGen::_pre_gen(){
+    _make_module("out");
 }
 
 void Zar::CodeGen::_post_gen(){
-    builder.CreateRet(ConstantInt::get(builder.getInt32Ty(),0)); // Replace this first, this is written just for test
+    builder.CreateRet(ConstantInt::get(builder.getInt32Ty(),0));
     std::error_code EC;
-    raw_fd_ostream dest("module1.ll",EC,sys::fs::OF_None);
+    raw_fd_ostream dest("out.ll",EC,sys::fs::OF_None);
     if(EC){
         errs() << "Could Not Open File" << EC.message() << '\n';
         return;
@@ -289,6 +309,8 @@ void Zar::CodeGen::_post_gen(){
 
 void Zar::CodeGen::generate(){
     _pre_gen();
-    tree.unit->accept(*this);
+    for(int i = 0;i<tree.unit.size();i++){
+        tree.unit.at(i)->accept(*this);
+    }
     _post_gen();
 }
