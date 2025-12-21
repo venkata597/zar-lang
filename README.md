@@ -88,12 +88,14 @@ mkdir build
 cd build
 cmake ..
 make
+```
 
 ## ▶️ Usage
 
 ### Running the Compiler
 ```bash
 ./zarc <source_file>
+```
 
 ### Example
 ./zarc test/file.zar
