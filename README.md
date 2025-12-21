@@ -98,4 +98,6 @@ make
 ```
 
 ### Example
+```bash
 ./zarc test/file.zar
+```
