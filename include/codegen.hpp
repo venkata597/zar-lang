@@ -69,12 +69,6 @@ namespace Zar{
         Value* _genGEq(Value* lhs,Value* rhs,std::string rn);
         Value* _genLEq(Value* lhs,Value* rhs,std::string rn);
 
-        // Conditional Helpers
-        std::vector<int> _ifstack;
-        int _if_count{0};
-        void _enterif();
-        void _exitif();
-        std::string _get_cond_name(std::string bnme);
 
         void _pre_gen();
         void _post_gen();

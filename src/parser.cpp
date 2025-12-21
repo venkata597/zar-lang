@@ -39,6 +39,7 @@ std::unordered_map<Zar::TokenTypes,Zar::DataType> Zar::type_ref = {
     {Zar::TokenTypes::STRING,Zar::DataType::TYPE_STRING},
     {Zar::TokenTypes::LONG,Zar::DataType::TYPE_LONG},
     {Zar::TokenTypes::SHORT,Zar::DataType::TYPE_SHORT},
+    {Zar::TokenTypes::VOID,Zar::DataType::TYPE_VOID},
 };
 
 void Zar::Parser::_advance(){

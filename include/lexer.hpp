@@ -37,6 +37,7 @@ namespace Zar{
         BANG,
         EQ,
         // Keywords
+        VOID,
         INT,
         FLOAT,
         LONG,

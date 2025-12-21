@@ -1,5 +1,6 @@
 #include "../include/codegen.hpp"
 #include <llvm/IR/BasicBlock.h>
+#include <llvm/IR/Constants.h>
 #include <llvm/IR/DerivedTypes.h>
 #include <llvm/IR/Function.h>
 #include <llvm/IR/Instructions.h>
@@ -88,21 +89,6 @@ Value* Zar::CodeGen::_genLEq(Value* lhs,Value* rhs,std::string rn){
     return builder.CreateICmpULE(lhs,rhs,rn);
 }
 
-void Zar::CodeGen::_enterif(){
-    _ifstack.push_back(++_if_count);
-}
-
-void Zar::CodeGen::_exitif(){
-    _ifstack.pop_back();
-}
-
-std::string Zar::CodeGen::_get_cond_name(std::string bnme){
-    std::string bn;
-    bn+= "if";
-    bn+=std::to_string(_ifstack.back());
-    bn+= bnme;
-    return bn;
-}
 
 void Zar::CodeGen::visit(const literalNode* node){
     if(node->type==ExprType::EXPR_IDEN_LITRL){
@@ -211,12 +197,10 @@ void Zar::CodeGen::visit(const AssignStmtNode* node){
 void Zar::CodeGen::visit(const IfStmtNode* node){
     node->condition->accept(*this);
     Value* cond = _lastVal;
-    _enterif();
-    BasicBlock* thenblock = BasicBlock::Create(context,_get_cond_name("then"),_current_function);
-    BasicBlock* elseblock = BasicBlock::Create(context,_get_cond_name("else"),_current_function);
+    BasicBlock* thenblock = BasicBlock::Create(context,"then",_current_function);
+    BasicBlock* elseblock = BasicBlock::Create(context,"else",_current_function);
     BasicBlock* mergeblock = BasicBlock::Create(context,"merge",_current_function);
     builder.CreateCondBr(cond,thenblock,elseblock);
-    _exitif();
     builder.SetInsertPoint(thenblock);
     node->thenblock->accept(*this);
     builder.CreateBr(mergeblock);
@@ -289,6 +273,12 @@ void Zar::CodeGen::visit(const Zar::FuncDeclNode* node){
     BasicBlock* entry = BasicBlock::Create(context,"entry",_current_function);
     builder.SetInsertPoint(entry);
     node->body->accept(*this);
+    if(node->return_type == DataType::TYPE_VOID){
+        builder.CreateRetVoid();
+    }
+    else{
+        builder.CreateRet(ConstantInt::get(builder.getInt32Ty(),0));
+    }
 }
 
 void Zar::CodeGen::_pre_gen(){
@@ -296,7 +286,6 @@ void Zar::CodeGen::_pre_gen(){
 }
 
 void Zar::CodeGen::_post_gen(){
-    builder.CreateRet(ConstantInt::get(builder.getInt32Ty(),0));
     std::error_code EC;
     raw_fd_ostream dest("out.ll",EC,sys::fs::OF_None);
     if(EC){

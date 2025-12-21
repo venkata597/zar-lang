@@ -3,6 +3,10 @@ fn add(a:int,b:int): int{
     if(y==9){
         y = 0;
     }
+    else{
+        y = 1;
+    }
+
 }
 
 fn main(a:int): int{
