@@ -72,6 +72,7 @@ Parser
 Abstract Syntax Tree (AST)
     ↓
 (Codegen scaffolding — incomplete)
+```
 
 ## ⚙️ Build Instructions
 
