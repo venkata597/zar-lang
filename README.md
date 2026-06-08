@@ -1,5 +1,4 @@
-# Note: This repo is being archived. This project will be shifting away from the compiler 
-# architecture to an interpreted/scripting language in a new repo. New repo link: [soon]
+# Note: This repo is being archived. This project will be shifting away from the compiler architecture to an interpreted/scripting language in a new repo. New repo link: [soon]
 
 # 🛠️ Zar - A Custom Compiler Project (C++)
 
