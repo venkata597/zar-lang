@@ -1,3 +1,6 @@
+# Note: This repo is being archived. This project will be shifting away from the compiler 
+# architecture to an interpreted/scripting language in a new repo. New repo link: [soon]
+
 # 🛠️ Zar - A Custom Compiler Project (C++)
 
 A **lightweight, educational compiler** implemented in C++, built to explore core compiler construction concepts such as lexing, parsing, AST design, and early-stage code generation.
