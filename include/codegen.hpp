@@ -85,7 +85,7 @@ namespace Zar{
         void visit(const VarDeclNode* node) override;
         void visit(const FuncDeclNode* node) override;
         void visit(const ParamDeclNode* node) override;
-
+        void visit(const ExternFuncDeclNode* node) override;
 
         CodeGen(TranslationUnit Tree):
             tree(std::move(Tree)),builder(context) {}

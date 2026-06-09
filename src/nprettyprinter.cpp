@@ -126,6 +126,17 @@ void Zar::NPrettyPrinter::visit(const Zar::FuncDeclNode* node){
     std::cout << "================" << '\n';
 }
 
+void Zar::NPrettyPrinter::visit(const Zar::ExternFuncDeclNode* node){
+    std::cout << "================" << '\n';
+    std::cout << "Function name: " << node->name << '\n';
+    std::cout << "Return Type: " << _type_to_str(node->return_type) << '\n';
+    std::cout << "Parameters: " << '\n';
+    for(int i = 0;i<node->params.size();i++){
+        node->params[i]->accept(*this);
+    }
+    std::cout << "================" << '\n';
+}
+
 Zar::TranslationUnit Zar::NPrettyPrinter::print_ast() {
     for(int i = 0;i<ast.unit.size();i++){
         if(!ast.unit[i]){

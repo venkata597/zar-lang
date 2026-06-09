@@ -1,15 +1,6 @@
-fn add(a:int,b:int): int{
-    let mut y: int = 9;
-    if(y==9){
-        y = 0;
-    }
-    else{
-        y = 1;
-    }
+extern fn add(a: int,b: int) : int;
 
-}
-
-fn main(a:int): int{
+fn main(): int{
     let mut x: int = 10;
     loop(let mut i: int = 0;i<10;i = i + 1;){
         x = x + 1;

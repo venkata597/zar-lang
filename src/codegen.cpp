@@ -281,6 +281,22 @@ void Zar::CodeGen::visit(const Zar::FuncDeclNode* node){
     }
 }
 
+void Zar::CodeGen::visit(const Zar::ExternFuncDeclNode* node){
+    for(int i = 0;i<node->params.size();i++){
+        node->params.at(i)->accept(*this);
+    }
+
+    Type* rt_type = types.at(node->return_type);
+    FunctionType* type = FunctionType::get(rt_type,_c_params_list,false);
+    Function* fn = Function::Create(
+        type,
+        Function::ExternalLinkage,
+        node->name,
+        _current_module.get()
+    );
+    _c_params_list.clear();
+}
+
 void Zar::CodeGen::_pre_gen(){
     _make_module("out");
 }

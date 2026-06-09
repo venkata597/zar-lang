@@ -38,6 +38,7 @@ class NPrettyPrinter: public ExprVisitor,public StmtVisitor,public DeclVisitor{
         void visit(const VarDeclNode* node) override;
         void visit(const FuncDeclNode* node) override;
         void visit(const ParamDeclNode* node) override;
+        void visit(const ExternFuncDeclNode* node) override;
 
         TranslationUnit print_ast();
 };

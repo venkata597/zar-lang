@@ -40,6 +40,7 @@ namespace Zar{
         virtual void visit(const VarDeclNode* node) = 0;
         virtual void visit(const FuncDeclNode* node) = 0;
         virtual void visit(const ParamDeclNode* node) = 0;
+        virtual void visit(const ExternFuncDeclNode* node) = 0;
     };
 
 }

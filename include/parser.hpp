@@ -51,6 +51,7 @@ namespace Zar{
         LoopStmtPtr _parse_loop();
         ParamDeclPtr _parse_param();
         FuncDeclPtr _parse_fn();
+        ExternFuncDeclPtr _parse_extern_fn();
         BlockStmtPtr _blockstmts();
         BlockPtr _parse_block();
         StmtPtr _statements();

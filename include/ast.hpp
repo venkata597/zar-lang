@@ -24,6 +24,7 @@ namespace Zar{
     class Decl;
     class VarDeclNode;
     class FuncDeclNode;
+    class ExternFuncDeclNode;
     class ParamDeclNode;
     class ExprStmt;
     class DeclStmt;
@@ -42,6 +43,7 @@ namespace Zar{
     using DeclPtr = std::unique_ptr<Decl>;
     using VarDeclPtr = std::unique_ptr<VarDeclNode>;
     using FuncDeclPtr = std::unique_ptr<FuncDeclNode>;
+    using ExternFuncDeclPtr = std::unique_ptr<ExternFuncDeclNode>;
     using ParamDeclPtr = std::unique_ptr<ParamDeclNode>;
     using ExprStmtPtr = std::unique_ptr<ExprStmt>;
     using DeclStmtPtr = std::unique_ptr<DeclStmt>;
@@ -85,6 +87,7 @@ namespace Zar{
         DECL_VAR,
         DECL_PARAM,
         DECL_FUNC,
+        DECL_EXTERN,
     };
 
     enum class DataType{
@@ -246,6 +249,17 @@ namespace Zar{
         std::vector<ParamDeclPtr> params;
         FuncDeclNode(std::string nm,DataType rt,std::vector<ParamDeclPtr> pvect,BlockPtr fbdy):
             Decl(DeclType::DECL_FUNC),name(nm),return_type(rt),params(std::move(pvect)),body(std::move(fbdy)) {}
+        void accept(DeclVisitor& v) override;
+    };
+
+    class ExternFuncDeclNode: public Decl{
+    public:
+        std::string name;
+        DataType return_type;
+        std::vector<ParamDeclPtr> params;
+        // No Body for extern function declaration
+        ExternFuncDeclNode(std::string nme,DataType rt,std::vector<ParamDeclPtr> pvect):
+            Decl(DeclType::DECL_EXTERN),name(nme),return_type(rt),params(std::move(pvect)) {}
         void accept(DeclVisitor& v) override;
     };
 

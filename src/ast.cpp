@@ -44,3 +44,7 @@ void Zar::FuncDeclNode::accept(Zar::DeclVisitor& v){
 void Zar::ParamDeclNode::accept(Zar::DeclVisitor& v){
     v.visit(this);
 }
+
+void Zar::ExternFuncDeclNode::accept(Zar::DeclVisitor& v){
+    v.visit(this);
+}

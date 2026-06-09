@@ -336,6 +336,61 @@ Zar::FuncDeclPtr Zar::Parser::_parse_fn(){
     return std::make_unique<FuncDeclNode>(fn_iden,rt,std::move(params),std::move(block));
 }
 
+Zar::ExternFuncDeclPtr Zar::Parser::_parse_extern_fn(){
+    std::string fn_iden;
+    if(_check(Zar::TokenTypes::FUNC)){
+        _advance();
+    }else{
+        err_engine.report_error(ERROR,"Expected fn keyword after extern",_peek(-1)._src_loc);
+    }
+
+    if(_check(Zar::TokenTypes::IDENTIFIER)){
+        fn_iden = _Tok._lexeme;
+        _advance();
+    }else{
+        err_engine.report_error(ERROR,"Expected function name after fn keyword",_peek(-1)._src_loc);
+    }
+    _check(Zar::TokenTypes::L_PAREN)? _advance() : err_engine.report_error(ERROR,"Missing \"(\" after function name ",_peek(-1)._src_loc);
+    std::vector<ParamDeclPtr> params;
+    while(_Tok._type!=TokenTypes::R_PAREN && _Tok._type!=TokenTypes::_EOF){
+        auto param = _parse_param();
+        params.push_back(std::move(param));
+        if(_check(Zar::TokenTypes::R_PAREN)){
+            continue;
+        }
+        else if(_check(Zar::TokenTypes::COMMA)){
+            _advance();
+            if(_check(Zar::TokenTypes::IDENTIFIER)){
+                continue;
+            }
+            else{
+                err_engine.report_error(ERROR,"Unnecessary ',' after a parameter",_peek(-1)._src_loc);
+            }
+        }
+        else{
+            _advance();
+        }
+    }
+     _check(Zar::TokenTypes::R_PAREN) ? _advance() : err_engine.report_error(ERROR,"Missing \")\" after parameters declarations ",_peek(-1)._src_loc);
+    _check(Zar::TokenTypes::COLON) ? _advance() : err_engine.report_error(ERROR,"Expected a ':'",_peek(-1)._src_loc);
+    std::unordered_set<TokenTypes> set(type_lookup.begin(),type_lookup.end());
+    Zar::DataType rt;
+    if(set.count(_peek()._type)){
+        rt = _get_datatype(_Tok._type);
+    }
+    else{
+        err_engine.report_error(ERROR,"Expected a return type after ':' ",_peek(-1)._src_loc);
+    }
+    _advance();
+    if(_check(Zar::TokenTypes::SEMIC)){
+        _advance();
+    }
+    else{
+        err_engine.report_error(ERROR,"Expected a semi colon",_peek(-1)._src_loc);
+    }
+    return std::make_unique<ExternFuncDeclNode>(fn_iden,rt,std::move(params));
+}
+
 Zar::StmtPtr Zar::Parser::_statements(){
     if(_Tok._type == Zar::TokenTypes::IDENTIFIER){
         auto asgn = _assignment();
@@ -397,6 +452,11 @@ Zar::DeclPtr Zar::Parser::_decls(){
         _advance();
         auto fnptr = _parse_fn();
         return std::move(fnptr);
+    }
+    else if(_Tok._type == Zar::TokenTypes::EXTERN){
+        _advance();
+        auto exfnptr = _parse_extern_fn();
+        return std::move(exfnptr);
     }
     return nullptr;
 }
